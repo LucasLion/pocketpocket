@@ -6,6 +6,8 @@ import cardsData from "@/data/cards.json";
 
 const booster = ref([]);
 let holdInterval = null;
+let boosterCount = 0;
+let isNew = false;
 
 const player = inject("player");
 
@@ -40,26 +42,34 @@ function rollRarity(slot) {
 	return 'Uncommon';
 }
 
+function isNewCard(cardNumber) {
+	return !player.cardsPossessed.value.includes(cardNumber);
+}
+
 function openBooster() {
+	boosterCount++;
 	booster.value = [];
 
 	// Slots 1-3: Common
 	for (let i = 0; i < 3; i++) {
 		const cardNum = getRandomCardOfRarity('Common');
-		booster.value.push({ path: cardNumberToPath(cardNum), rarity: 'Common', number: cardNum });
+		isNew = !player.cardsPossessed.value.includes(cardNum);
+		booster.value.push({ path: cardNumberToPath(cardNum), rarity: 'Common', number: cardNum, boosterId: boosterCount, isNew: isNew });
 		player.addCardToCollection(cardNum);
 	}
 
 	// Slot 4: au moins Uncommon
 	const rarity4 = rollRarity('4');
 	const card4 = getRandomCardOfRarity(rarity4);
-	booster.value.push({ path: cardNumberToPath(card4), rarity: rarity4, number: card4 });
+	isNew = !player.cardsPossessed.value.includes(card4);
+	booster.value.push({ path: cardNumberToPath(card4), rarity: rarity4, number: card4, boosterId: boosterCount, isNew: isNew });
 	player.addCardToCollection(card4);
 
 	// Slot 5: au moins Uncommon (meilleures chances)
 	const rarity5 = rollRarity('5');
 	const card5 = getRandomCardOfRarity(rarity5);
-	booster.value.push({ path: cardNumberToPath(card5), rarity: rarity5, number: card5 });
+	isNew = !player.cardsPossessed.value.includes(card5);
+	booster.value.push({ path: cardNumberToPath(card5), rarity: rarity5, number: card5, boosterId: boosterCount, isNew: isNew });
 	player.addCardToCollection(card5);
 
 	console.log('Booster:', booster.value.map(c => `#${c.number} (${c.rarity})`).join(', '));
@@ -69,27 +79,32 @@ function cardNumberToPath(cardNumber) {
 	return `/jpg/A1-${String(cardNumber).padStart(3, '0')}.jpg`;
 }
 
+
 </script>
 <template>
 	<div class="booster-container">
 		<TransitionGroup name="card" tag="div" class="card-row">
 			<div v-for="(card, index) in booster.slice(0, 3)"
-				:key="card.number + '-' + index"
-				:style="{ '--delay': index * 0.15 + 's' }"
+				:key="card.boosterId + '-' + card.number + '-' + index"
+				:style="{ '--delay': index * 0.7 + 's' }"
 				class="card-item">
 				<div class="card-flip">
-					<img :src="card.path" />
+					<div v-if="card.isNew" class="new-card scale-in-center">Nouveau</div>
+					<img class="card-front" :src="card.path" />
+					<img class="card-back" src="/back.png" />
 				</div>
 				<span class="rarity" :class="card.rarity.toLowerCase().replace(' ', '-')">{{ card.rarity }}</span>
 			</div>
 		</TransitionGroup>
 		<TransitionGroup name="card" tag="div" class="card-row">
 			<div v-for="(card, index) in booster.slice(3, 5)"
-				:key="card.number + '-' + (index + 3)"
-				:style="{ '--delay': (index + 3) * 0.15 + 's' }"
+				:key="card.boosterId + '-' + card.number + '-' + (index + 3)"
+				:style="{ '--delay': (index + 3) * 0.7 + 's' }"
 				class="card-item">
 				<div class="card-flip">
-					<img :src="card.path" />
+					<div v-if="card.isNew" class="new-card scale-in-center">Nouveau</div>
+					<img class="card-front" :src="card.path" />
+					<img class="card-back" src="/back.png" />
 				</div>
 				<span class="rarity" :class="card.rarity.toLowerCase().replace(' ', '-')">{{ card.rarity }}</span>
 			</div>
@@ -107,6 +122,25 @@ function cardNumberToPath(cardNumber) {
 </template>
 
 <style scoped>
+
+.scale-in-center {
+	animation: scale-in-center 0.4s ease-out calc(var(--delay) + 0.5s) both;
+}
+
+@keyframes scale-in-center {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .booster-container {
 	display: flex;
 	flex-direction: column;
@@ -121,6 +155,7 @@ function cardNumberToPath(cardNumber) {
 	display: flex;
 	justify-content: center;
 	gap: 10px;
+	padding-bottom: 20px;
 }
 
 .card-item {
@@ -133,6 +168,7 @@ function cardNumberToPath(cardNumber) {
 
 .card-flip {
 	width: 100%;
+	position: relative;
 	transform-style: preserve-3d;
 }
 
@@ -142,20 +178,56 @@ function cardNumberToPath(cardNumber) {
 	backface-visibility: hidden;
 }
 
+.new-card {
+	position: absolute;
+	top: -8px;
+	left: -4px;
+	padding: 2px 8px 3px;
+	background: linear-gradient(180deg,rgba(212, 129, 51, 1) 0%, rgba(201, 36, 146, 1) 100%);
+	border-radius: 50px;
+	color: white;
+	font-size: 11px;
+	z-index: 10;
+}
+
+.card-front {
+	display: block;
+}
+
+.card-back {
+	position: absolute;
+	top: 0;
+	left: 0;
+	transform: rotateY(180deg);
+}
+
 /* Animation d'entrée */
 .card-enter-from {
 	opacity: 0;
-	transform: rotateY(180deg) scale(0.8);
+	transform: scale(0.8);
+}
+
+.card-enter-from .card-flip {
+	transform: rotateY(180deg);
 }
 
 .card-enter-active {
-	transition: all 0.8s ease-out;
+	transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 	transition-delay: var(--delay);
+}
+
+.card-enter-active .card-flip {
+	transition: transform 0.3s ease-out;
+	transition-delay: calc(var(--delay) + 0.2s);
 }
 
 .card-enter-to {
 	opacity: 1;
-	transform: rotateY(0deg) scale(1);
+	transform: scale(1);
+}
+
+.card-enter-to .card-flip {
+	transform: rotateY(0deg);
 }
 
 /* Animation de sortie (rapide) */

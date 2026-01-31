@@ -4,6 +4,7 @@ import { ref, provide } from 'vue'
 import Header from './components/Header.vue'
 import PokedexPage from "./components/PokedexPage.vue"
 import BoosterPage from "./components/BoosterPage.vue"
+import SettingsPage from "./components/SettingsPage.vue"
 import Player from "./models/Player.ts"
 
 const currentPage = ref('booster');
@@ -22,6 +23,7 @@ function onNavigate(page: string) {
 	<main>
 		<PokedexPage v-if="currentPage === 'pokedex'" />
 		<BoosterPage v-else-if="currentPage === 'booster'" />
+		<SettingsPage v-else-if="currentPage === 'settings'" />
 	</main>
 	<Header class="header" @navigate="onNavigate"/>
 
